@@ -1,11 +1,13 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "hittable.h"
-#include "material.h"
 #include <thread>
 #include <atomic>
 #include <fstream>
+
+#include "hittable.h"
+#include "pdf.h"
+#include "material.h"
 
 using namespace std;
 
@@ -30,7 +32,7 @@ public:
 	float defocus_angle = 0.0f;  // Variation angle of rays through each pixel
 	float focus_dist = 10.0f;    // Distance from camera lookfrom point to plane of perfect focus
 
-	void render(const hittable& world) 
+	void render(const hittable& world, const hittable& lights) 
 	{
 		initialize();
 
@@ -41,7 +43,7 @@ public:
 
 		for (int i = 0; i < thread_count; i++)
 		{
-			threads.emplace_back(&camera::render_lines, this, std::ref(world));
+			threads.emplace_back(&camera::render_lines, this, std::ref(world), std::ref(lights));
 		}
 		
 		
@@ -119,7 +121,7 @@ private:
 		defocus_disk_v = v * defocus_radius;
 	}
 
-	void render_lines(const hittable& world)
+	void render_lines(const hittable& world, const hittable& lights)
 	{
 		int current_line = 0;
 		while ((current_line = next_scanline++) < image_height) {
@@ -131,7 +133,7 @@ private:
 				for (int s_j = 0; s_j < sqrt_spp; s_j++) {
 					for (int s_i = 0; s_i < sqrt_spp; s_i++) {
 						ray r = get_ray(i, current_line, s_i, s_j);
-						pixel_color += ray_color(r, max_depth, world);
+						pixel_color += ray_color(r, max_depth, world,lights);
 					}
 				}
 			
@@ -177,7 +179,7 @@ private:
 		return glm::vec3(random_float() - 0.5f, random_float() - 0.5f, 0);
 	}
 
-	color ray_color(const ray& r, int depth, const hittable& world) const {
+	color ray_color(const ray& r, int depth, const hittable& world, const hittable& lights) const {
 		if (depth <= 0)
 			return color(0, 0, 0);
 
@@ -185,17 +187,26 @@ private:
 		if (!world.hit(r, interval(0.001f, infinity), rec))
 			return background;
 		
-		ray scattered;
-		color attenuation;
-		float pdf_value;
-		color color_from_emission = rec.mat->emitted(rec.u, rec.v, rec.p);
-		if (!rec.mat->scatter(r, rec, attenuation, scattered, pdf_value))
+		scatter_record srec;
+		color color_from_emission = rec.mat->emitted(r, rec, rec.u, rec.v, rec.p);
+
+		if (!rec.mat->scatter(r, rec, srec))
 			return color_from_emission;
 
-		float scattering_pdf = rec.mat->scattering_pdf(r, rec, scattered);
-		pdf_value = scattering_pdf;
+		if (srec.skip_pdf) 
+			return srec.attenuation * ray_color(srec.skip_pdf_ray, depth - 1, world, lights);
 
-		color color_from_scatter = (attenuation * scattering_pdf * ray_color(scattered, depth - 1, world)) / pdf_value;
+		auto light_ptr = make_shared<hittable_pdf>(lights, rec.p);
+		mixture_pdf p(light_ptr, srec.pdf_ptr);
+
+		ray scattered = ray(rec.p, p.generate(), r.time());
+		auto pdf_value = p.value(scattered.direction());
+
+		float scattering_pdf = rec.mat->scattering_pdf(r, rec, scattered);
+
+		color sample_color = ray_color(scattered, depth - 1, world, lights);
+		color color_from_scatter =
+			(srec.attenuation * scattering_pdf * sample_color) / pdf_value;
 
 		return color_from_emission + color_from_scatter;
 	

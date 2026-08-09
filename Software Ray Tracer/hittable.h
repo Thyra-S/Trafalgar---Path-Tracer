@@ -30,6 +30,14 @@ public:
 	virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const = 0;
 
 	virtual aabb bounding_box() const = 0;
+
+	virtual float pdf_value(const point3& origin, const glm::vec3& direction) const {
+		return 0.0;
+	}
+
+	virtual glm::vec3 random(const point3& origin) const {
+		return glm::vec3(1, 0, 0);
+	}
 };
 
 class translate : public hittable {

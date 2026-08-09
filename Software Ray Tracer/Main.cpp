@@ -34,6 +34,7 @@ struct camera_parameters
 };
 
 hittable_list world;
+quad lights;
 camera_parameters params;
 
 void bouncing_spheres()
@@ -244,7 +245,6 @@ void tris()
 }
 
 void simple_light() {
-	hittable_list world;
 
 	auto pertext = make_shared<noise_texture>(4);
 	world.add(make_shared<sphere>(point3(0, -1000, 0), 1000, make_shared<lambertian>(pertext)));
@@ -599,6 +599,7 @@ void cornell_miku() {
 
 void cornell()
 {
+	hittable_list scene;
 
 	auto red = make_shared<lambertian>(color(.65, .05, .05));
 	auto white = make_shared<lambertian>(color(.73, .73, .73));
@@ -606,26 +607,33 @@ void cornell()
 	auto light = make_shared<diffuse_light>(color(15, 15, 15));
 
 	// Cornell box sides
-	world.add(make_shared<quad>(point3(555, 0, 0), glm::vec3(0, 0, 555), glm::vec3(0, 555, 0), green));
-	world.add(make_shared<quad>(point3(0, 0, 555), glm::vec3(0, 0, -555), glm::vec3(0, 555, 0), red));
-	world.add(make_shared<quad>(point3(0, 555, 0), glm::vec3(555, 0, 0), glm::vec3(0, 0, 555), white));
-	world.add(make_shared<quad>(point3(0, 0, 555), glm::vec3(555, 0, 0), glm::vec3(0, 0, -555), white));
-	world.add(make_shared<quad>(point3(555, 0, 555), glm::vec3(-555, 0, 0), glm::vec3(0, 555, 0), white));
+	scene.add(make_shared<quad>(point3(555, 0, 0), glm::vec3(0, 0, 555), glm::vec3(0, 555, 0), green));
+	scene.add(make_shared<quad>(point3(0, 0, 555), glm::vec3(0, 0, -555), glm::vec3(0, 555, 0), red));
+	scene.add(make_shared<quad>(point3(0, 555, 0), glm::vec3(555, 0, 0), glm::vec3(0, 0, 555), white));
+	scene.add(make_shared<quad>(point3(0, 0, 555), glm::vec3(555, 0, 0), glm::vec3(0, 0, -555), white));
+	scene.add(make_shared<quad>(point3(555, 0, 555), glm::vec3(-555, 0, 0), glm::vec3(0, 555, 0), white));
 
 	// Light
-	world.add(make_shared<quad>(point3(213, 554, 227), glm::vec3(130, 0, 0), glm::vec3(0, 0, 105), light));
+	scene.add(make_shared<quad>(point3(213, 554, 227), glm::vec3(130, 0, 0), glm::vec3(0, 0, 105), light));
 
 	// Box 1
-	shared_ptr<hittable> box1 = box(point3(0, 0, 0), point3(165, 330, 165), white);
+	shared_ptr<material> aluminum = make_shared<metal>(color(0.8, 0.85, 0.88), 0.0);
+	shared_ptr<hittable> box1 = box(point3(0, 0, 0), point3(165, 330, 165), aluminum);
 	box1 = make_shared<rotate_y>(box1, 15);
 	box1 = make_shared<translate>(box1, glm::vec3(265, 0, 295));
-	world.add(box1);
+	scene.add(box1);
 
 	// Box 2
 	shared_ptr<hittable> box2 = box(point3(0, 0, 0), point3(165, 165, 165), white);
 	box2 = make_shared<rotate_y>(box2, -18);
 	box2 = make_shared<translate>(box2, glm::vec3(130, 0, 65));
-	world.add(box2);
+	scene.add(box2);
+
+	world = hittable_list(make_shared<bvh_node>(scene));
+
+	// Light Sources
+	auto empty_material = shared_ptr<material>();
+	lights = quad(point3(343, 554, 332), glm::vec3(-130, 0, 0), glm::vec3(0, 0, -105), empty_material);
 
 	params =
 	{
@@ -679,8 +687,6 @@ int main()
 	case 14: cornell(); break;
 	}
 
-	world = hittable_list(make_shared<bvh_node>(world));
-
 	camera cam;
 
 	// performance impacting params, comment to use defaults for scenes
@@ -691,5 +697,5 @@ int main()
 
 	set_camera_parameters(cam, params);
 
-	cam.render(world);
+	cam.render(world,lights);
 }

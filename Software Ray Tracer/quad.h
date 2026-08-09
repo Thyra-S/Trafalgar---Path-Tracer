@@ -7,6 +7,8 @@
 class quad : public hittable
 {
 public:
+	quad() = default;
+	
 	quad(const point3& Q, const glm::vec3& u, const glm::vec3& v, shared_ptr<material> mat)
 		: Q(Q), u(u), v(v), mat(mat) 
 	{
@@ -14,10 +16,14 @@ public:
 		normal = glm::normalize(n);
 		D = dot(normal, Q);
 		w = n / dot(n, n);
+
+		area = glm::length(n);
+
 		set_bounding_box();
 	}
 
-	virtual void set_bounding_box() {
+	virtual void set_bounding_box() 
+	{
 		// Compute the bounding box of all four vertices.
 		auto bbox_diagonal1 = aabb(Q, Q + u + v);
 		auto bbox_diagonal2 = aabb(Q + u, Q + v);
@@ -71,12 +77,31 @@ public:
 		rec.v = b;
 		return true;
 	}
+
+	float pdf_value(const point3& origin, const glm::vec3& direction) const override 
+	{
+		hit_record rec;
+		if (!this->hit(ray(origin, direction), interval(0.001, infinity), rec))
+			return 0;
+
+		auto distance_squared = rec.t * rec.t * dot(direction,direction);
+		auto cosine = std::fabs(dot(direction, rec.normal) / glm::length(direction));
+
+		return distance_squared / (cosine * area);
+	}
+
+	glm::vec3 random(const point3& origin) const override 
+	{
+		auto p = Q + (random_float() * u) + (random_float() * v);
+		return p - origin;
+	}
 private:
 	point3 Q;
 	glm::vec3 u, v, w, normal;
 	shared_ptr<material> mat;
 	aabb bbox;
 	float D;
+	float area;
 };
 
 inline shared_ptr<hittable_list> box(const point3& a, const point3& b, shared_ptr<material> mat)
