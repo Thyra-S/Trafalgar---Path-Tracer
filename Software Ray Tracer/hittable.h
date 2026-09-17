@@ -38,6 +38,10 @@ public:
 	virtual glm::vec3 random(const point3& origin) const {
 		return glm::vec3(1, 0, 0);
 	}
+
+	virtual float get_area() const {
+		return 0.0;
+	}
 };
 
 class translate : public hittable {
@@ -60,6 +64,14 @@ public:
 		rec.p += offset;
 
 		return true;
+	}
+
+	float pdf_value(const point3& origin, const glm::vec3& direction) const override {
+		return object->pdf_value(origin - offset, direction);
+	}
+
+	glm::vec3 random(const point3& origin) const override {
+		return object->random(origin - offset);
 	}
 
 	aabb bounding_box() const override { return bbox; }
@@ -193,6 +205,14 @@ public:
 		// so we don't need to do any math on rec.normal.
 
 		return true;
+	}
+
+	float pdf_value(const point3& origin, const glm::vec3& direction) const override {
+		return object->pdf_value(origin / scale_factor, direction);
+	}
+
+	glm::vec3 random(const point3& origin) const override {
+		return object->random(origin / scale_factor) * scale_factor;
 	}
 
 	aabb bounding_box() const override { return bbox; }

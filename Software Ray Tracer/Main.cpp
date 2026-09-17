@@ -34,7 +34,7 @@ struct camera_parameters
 };
 
 hittable_list world;
-quad lights;
+hittable_list lights;
 camera_parameters params;
 
 void bouncing_spheres()
@@ -633,7 +633,7 @@ void cornell()
 
 	// Light Sources
 	auto empty_material = shared_ptr<material>();
-	lights = quad(point3(343, 554, 332), glm::vec3(-130, 0, 0), glm::vec3(0, 0, -105), empty_material);
+	lights = hittable_list(make_shared<quad>(point3(343, 554, 332), glm::vec3(-130, 0, 0), glm::vec3(0, 0, -105), empty_material));
 
 	params =
 	{
@@ -649,6 +649,70 @@ void cornell()
 		.defocus_angle = 0,
 		.focus_dist = 800.0f
 	};
+}
+
+void business_card() 
+{
+	hittable_list scene;
+
+	// 1. Dark, glossy metallic floor for reflections
+	auto ground_mat = make_shared<metal>(color(0.05f, 0.05f, 0.08f), 0.1f);
+	scene.add(make_shared<sphere>(point3(0.0f, -10000.0f, 0.0f), 10000.0f, ground_mat));
+
+	// 2. Materials
+	auto glass = make_shared<dielectric>(1.5f);
+	auto light_cyan = make_shared<diffuse_light>(color(2.0f, 12.0f, 15.0f)/ 15.0f);
+	auto light_pink = make_shared<diffuse_light>(color(15.0f, 2.0f, 10.0f)/ 15.0f);
+
+	// 3. Left Teapot: Glowing Cyan
+	model tp_cyan("models/utah_teapot.obj", light_cyan);
+	shared_ptr<hittable> mesh_cyan = tp_cyan.get_mesh();
+	mesh_cyan = scale_to_height(mesh_cyan, 50.0f);
+	mesh_cyan = make_shared<rotate_y>(mesh_cyan, 30.0f);
+	mesh_cyan = make_shared<translate>(mesh_cyan, point3(-10.0f, 0.0f, 20.0f));
+	scene.add(mesh_cyan);
+	lights.add(mesh_cyan); // Ensure it's sampled as a light
+
+	// 4. Center Teapot: Glass
+	model tp_glass("models/utah_teapot.obj", glass);
+	shared_ptr<hittable> mesh_glass = tp_glass.get_mesh();
+	mesh_glass = scale_to_height(mesh_glass, 80.0f);
+	mesh_glass = make_shared<rotate_y>(mesh_glass, -20.0f);
+	mesh_glass = make_shared<translate>(mesh_glass, point3(80.0f, 0.0f, 0.0f));
+	scene.add(mesh_glass);
+
+	// 5. Right Teapot: Glowing Pink
+	model tp_pink("models/utah_teapot.obj", light_pink);
+	shared_ptr<hittable> mesh_pink = tp_pink.get_mesh();
+	mesh_pink = scale_to_height(mesh_pink, 60.0f);
+	mesh_pink = make_shared<rotate_y>(mesh_pink, -45.0f);
+	mesh_pink = make_shared<translate>(mesh_pink, point3(170.0f, 0.0f, -30.0f));
+	scene.add(mesh_pink);
+
+	lights.add(mesh_pink); // Ensure it's sampled as a light
+
+	
+	world = hittable_list(make_shared<bvh_node>(scene));
+
+	params =
+	{
+		.aspect_ratio = 1.75f,
+		.image_width = 525,       // 1050x600 provides a crisp base for downscaling
+		.samples_per_pixel = 1000, // High sample count needed for glass + mesh lights
+		.max_depth = 50,
+		.background = color(0.02f, 0.02f, 0.03f), // Pitch dark, very slight blue tint
+		.vfov = 35.0f,
+		.lookfrom = point3(-80.0f, 60.0f, 300.0f), // Positioned left
+		.lookat = point3(30.0f, 40.0f, 0.0f),    // Looking right (shifts subjects to the right)
+		.vup = glm::vec3(0.0f, 1.0f, 0.0f),
+		.defocus_angle = 1.0f,
+		.focus_dist = 300.0f
+	};
+}
+
+void stanford_dragon()
+{
+	hittable_list scene; 
 }
 
 void set_camera_parameters(camera& cam, camera_parameters params) 
@@ -669,7 +733,7 @@ void set_camera_parameters(camera& cam, camera_parameters params)
 
 int main()
 {
-	switch (14)
+	switch (15)
 	{
 	case 1: bouncing_spheres(); break;
 	case 2: checkered_spheres(); break;
@@ -685,15 +749,17 @@ int main()
 	case 12: cornell_nike(); break;
 	case 13: cornell_miku(); break;
 	case 14: cornell(); break;
+	case 15: business_card(); break;
 	}
 
 	camera cam;
 
 	// performance impacting params, comment to use defaults for scenes
-	// params.image_width = 1000;
-	params.samples_per_pixel = 1000;
+	params.image_width = 500;
+	params.samples_per_pixel = 3;
 	// params.max_depth = 25;
-	params.thread_count = 8;
+
+	params.thread_count = 12;
 
 	set_camera_parameters(cam, params);
 

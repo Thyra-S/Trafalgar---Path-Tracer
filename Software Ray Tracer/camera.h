@@ -208,6 +208,10 @@ private:
 		color color_from_scatter =
 			(srec.attenuation * scattering_pdf * sample_color) / pdf_value;
 
+		if (glm::any(glm::isnan(color_from_emission)) || glm::any(glm::isinf(color_from_emission))) {
+			// Return a garish debug color like pure magenta
+			return glm::vec3(1.0f, 0.0f, 1.0f);
+		}
 		return color_from_emission + color_from_scatter;
 	
 	}

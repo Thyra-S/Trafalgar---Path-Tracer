@@ -37,6 +37,20 @@ public:
 		return hit_anything;
 	}
 
+	float pdf_value(const point3& origin, const glm::vec3& direction) const override {
+		float weight = 1.0f / objects.size();
+		float sum = 0.0f;
+		for (const auto& object : objects) {
+			sum += weight * object->pdf_value(origin, direction);
+		}
+		return sum;
+	}
+
+	glm::vec3 random(const point3& origin) const override {
+		int index = random_int(0, objects.size() - 1);
+		return objects[index]->random(origin);
+	}
+
 	aabb bounding_box() const override { return bbox; }
 
 private:

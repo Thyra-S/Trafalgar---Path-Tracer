@@ -27,6 +27,7 @@ public:
 
 		// Don't need to de duplicate for software ray tracer,
 		// std::unordered_map<glm::vec3, uint32_t> uniqueVertices;
+
 		std::vector<Vertex> vertices;
 		std::vector<size_t> indices;
 		hittable_list objects;
@@ -38,7 +39,7 @@ public:
 			for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
 				size_t fv = size_t(shape.mesh.num_face_vertices[f]);
 
-				// We only support triangles (fv == 3)
+				// only triangles
 				if (fv != 3) {
 					index_offset += fv;
 					continue;
@@ -46,7 +47,7 @@ public:
 
 				Vertex triangle_verts[3];
 
-				// Loop over the 3 vertices of the triangle
+				// loop over vertices in the face
 				for (size_t v = 0; v < 3; v++) 
 				{
 					tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
@@ -96,7 +97,8 @@ public:
 					triangle_verts[2].normal = flat_normal;
 				}
 
-				// 5. Create the specific mesh_triangle and add it to our list
+				// create the mesh triangle and add it to the list of objects with the inputted material
+				// might want to consider using the material from the .mtl file if available, but for now we will use the provided material
 				objects.add(make_shared<mesh_triangle>(
 					triangle_verts[0],
 					triangle_verts[1],

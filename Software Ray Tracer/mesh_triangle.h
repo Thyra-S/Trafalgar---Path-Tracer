@@ -18,6 +18,8 @@ public:
 		aabb box3(v1.position, v2.position);
 
 		bbox = aabb(aabb(box1, box2), box3);
+
+		area = 0.5f * glm::length(glm::cross(v1.position - v0.position, v2.position - v0.position));
 	}
 
 	bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
@@ -84,10 +86,30 @@ public:
 	}
 
 	aabb bounding_box() const override { return bbox; }
+
+	float get_area() const override {
+		return area;
+	}
+
+	glm::vec3 random(const point3& origin) const override 
+	{
+		// Sample a random point on the triangle using barycentric coordinates
+		float r1 = random_float();
+		float r2 = random_float();
+		
+		if (r1 + r2 > 1.0f) {
+			r1 = 1.0f - r1;
+			r2 = 1.0f - r2;
+		}
+		glm::vec3 random_point = v0.position + r1 * (v1.position - v0.position) + r2 * (v2.position - v0.position);
+		return random_point - origin;
+	}
+
 private:
 	Vertex v0, v1, v2;
 	shared_ptr<material> mat;
 	aabb bbox;
+	float area;
 };
 
 #endif // MESH_TRIANGLE_H
